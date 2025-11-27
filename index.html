@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的每週運動計畫 · Personal Weekly Fitness</title>
+  <meta name="description" content="個人每週運動計畫生成與紀錄網站：依據使用者每週行程與運動選項清單，產生每日運動建議並提供每日完成紀錄回存至 Google Sheet 的介面。" />
+  <style>
+    /* ===== CSS:BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans CJK TC";
+      background: #ffffff;
+      color: #101820;
+      line-height: 1.5;
+    }
+    .page { min-height: 100vh; display: flex; flex-direction: column; }
+    .container { width: 100%; max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+    /* ===== Header ===== */
+    header.site-header {
+      background: #f8fafb;
+      border-bottom: 1px solid #e6eef6;
+      position: sticky;
+      top: 0; z-index: 999;
+    }
+    .nav { display: flex; justify-content: space-between; align-items: center; height: 60px; }
+    .site-title { font-size: 1.1rem; font-weight: 700; color: #0b556a; text-decoration: none; }
+    .nav-links { display: flex; gap: 12px; }
+    .nav-link { color: #0b556a; text-decoration: none; padding: 6px 10px; border-radius: 4px; }
+    .nav-link:hover { background: rgba(11,85,106,0.08); }
+
+    /* ===== Sections ===== */
+    .section { padding: 30px 0; }
+    .section-title { font-size: 1.2rem; color: #0b556a; margin: 0 0 12px 0; }
+
+    /* ===== Cards / Inputs ===== */
+    .card {
+      background: #ffffff;
+      border: 1px solid #eaeef2;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .input-pill {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #dbe4e8;
+      font-size: 1rem;
+    }
+    select.input-pill { background: white; }
+
+    button.btn {
+      background: #0b556a;
+      color: white;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-right: 6px;
+    }
+
+    /* ===== Plan Cards ===== */
+    .plan-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .plan-day {
+      border-left: 4px solid #0b556a;
+      padding-left: 12px;
+    }
+
+    /* ===== LOG SECTION ===== */
+    .log-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .log-item { flex: 1; min-width: 180px; }
+
+    @media (min-width: 768px) {
+      .plan-grid { grid-template-columns: repeat(2,1fr); }
+    }
+    @media (min-width: 1200px) {
+      .plan-grid { grid-template-columns: repeat(3,1fr); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+
+    <!-- ================= Header ================= -->
+    <header class="site-header">
+      <div class="container nav">
+        <a class="site-title" href="#hero">MyWeekly · 運動計畫</a>
+        <nav class="nav-links">
+          <a href="#hero" class="nav-link">首頁</a>
+          <a href="#weekplan-section" class="nav-link">本週計畫</a>
+          <a href="#log-section" class="nav-link">紀錄</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="container">
+
+        <!-- ========================================================= -->
+        <!-- ================ SECTION:HERO-START ===================== -->
+        <!-- ========================================================= -->
+        <section id="hero" class="section section-hero">
+          <h1 class="section-title">輸入本週行程</h1>
+
+          <div class="card">
+            <p>請選擇本週在家工作日（多選）：</p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <label><input type="checkbox" class="wfh-day" value="1"> 一</label>
+              <label><input type="checkbox" class="wfh-day" value="2"> 二</label>
+              <label><input type="checkbox" class="wfh-day" value="3"> 三</label>
+              <label><input type="checkbox" class="wfh-day" value="4"> 四</label>
+              <label><input type="checkbox" class="wfh-day" value="5"> 五</label>
+            </div>
+
+            <p style="margin-top:16px;">週末活動狀況：</p>
+            <select id="weekend-select" class="input-pill">
+              <option value="none">無活動（可運動）</option>
+              <option value="busy">有活動（以伸展為主）</option>
+            </select>
+
+            <div style="margin-top:18px;">
+              <button id="generate-btn" class="btn">產生本週建議</button>
+              <button id="regenerate-btn" class="btn">重新生成</button>
+            </div>
+          </div>
+        </section>
+        <!-- ================ SECTION:HERO-END ===================== -->
+
+        <!-- ========================================================= -->
+        <!-- ================ SECTION:WEEKPLAN-START ================ -->
+        <!-- ========================================================= -->
+        <section id="weekplan-section" class="section section-week-plan">
+          <h2 class="section-title">本週運動計畫</h2>
+          <div id="weekly-plan-container" class="plan-grid">
+            <!-- JS 會動態填入 -->
+          </div>
+        </section>
+        <!-- ================ SECTION:WEEKPLAN-END ================= -->
+
+        <!-- ========================================================= -->
+        <!-- ================ SECTION:LOG-START ====================== -->
+        <!-- ========================================================= -->
+        <section id="log-section" class="section section-log">
+          <h2 class="section-title">每日運動紀錄</h2>
+
+          <div class="card">
+            <div class="log-row">
+              <div class="log-item">
+                <label>日期：</label>
+                <input id="log-date" class="input-pill" type="date" />
+              </div>
+
+              <div class="log-item">
+                <label>實際運動內容：</label>
+                <input id="log-actual" class="input-pill" type="text" placeholder="例如：跑步 20 分" />
+              </div>
+
+              <div class="log-item">
+                <label>時間（分鐘）：</label>
+                <input id="log-duration" class="input-pill" type="number" min="1" />
+              </div>
+            </div>
+
+            <div style="margin-top:12px;">
+              <label>備註：</label>
+              <input id="log-note" class="input-pill" type="text" placeholder="可留空" />
+            </div>
+
+            <div style="margin-top:18px;">
+              <button id="save-log-btn" class="btn">回存紀錄</button>
+            </div>
+
+            <p id="log-message" style="color:#0b556a; margin-top:10px;"></p>
+          </div>
+        </section>
+        <!-- ================ SECTION:LOG-END ======================== -->
+
+      </div>
+    </main>
+
+    <footer class="site-footer" style="padding:16px; text-align:center; background:#f5f8fa;">
+      © 2025 MyWeekly · 運動計畫
+    </footer>
+  </div>
+
+  <!-- ============================= -->
+  <!-- ======== JavaScript ========= -->
+  <!-- ============================= -->
+  <script>
+    /* =====================
+       API 設定
+    ====================== */
+    const API_BASE = "https://script.google.com/macros/s/XXXXX/exec"; 
+    // TODO: 請替換成你 Apps Script 的 Web App URL
+
+    async function callAPI(action, method="GET", body=null) {
+      const options = { method, headers:{} };
+      if(body){
+        options.headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(body);
+      }
+      const res = await fetch(`${API_BASE}?action=${action}`, options);
+      return res.json();
+    }
+
+    async function fetchExerciseList(){
+      return callAPI("getExerciseList");
+    }
+
+    async function saveWeeklyPlan(plan){
+      return callAPI("saveWeeklyPlan","POST",{plan});
+    }
+
+    async function saveExerciseLog(log){
+      return callAPI("saveLog","POST",log);
+    }
+
+    /* =====================
+       生成運動計畫邏輯（簡化示範版）
+       之後可依你需求升級
+    ====================== */
+    function generateWeeklyPlan(user, exercises){
+      const wfh = user.wfhDays;
+      const weekend = user.weekendStatus;
+
+      const plan = [];
+      const weekdays = ["一","二","三","四","五","六","日"];
+
+      for(let i=0; i<7; i++){
+        let dayType = "";
+        if(i < 5){
+          dayType = wfh.includes(i+1) ? "WFH" : "Office";
+        } else {
+          dayType = weekend === "busy" ? "BusyWeekend" : "FreeWeekend";
+        }
+
+        // ===== 範例簡化推薦 =====
+        let suggestion = "";
+        if(dayType === "WFH"){
+          suggestion = "居家有氧 20 分鐘";
+        } else if(dayType === "Office"){
+          suggestion = "伸展 + 核心 15 分鐘";
+        } else if(dayType === "BusyWeekend"){
+          suggestion = "輕度伸展 10 分鐘";
+        } else {
+          suggestion = "戶外散步 30 分鐘";
+        }
+
+        plan.push({
+          weekday: weekdays[i],
+          suggestion: suggestion,
+          logic_note: dayType,
+          date: getDateOfWeek(i)
+        });
+      }
+
+      return plan;
+    }
+
+    function getDateOfWeek(index){
+      const today = new Date();
+      const monday = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + index);
+      return d.toISOString().split("T")[0];
+    }
+
+    /* =====================
+       渲染畫面
+    ====================== */
+    function renderWeeklyPlan(plan){
+      const c = document.getElementById("weekly-plan-container");
+      c.innerHTML = "";
+
+      plan.forEach(p=>{
+        const card = document.createElement("div");
+        card.className = "card plan-day";
+        card.innerHTML = `
+          <h3>週${p.weekday}（${p.date}）</h3>
+          <p>建議：${p.suggestion}</p>
+          <p style="color:#557;">邏輯：${p.logic_note}</p>
+        `;
+        c.appendChild(card);
+      });
+    }
+
+    /* =====================
+       事件綁定
+    ====================== */
+
+    document.getElementById("generate-btn").addEventListener("click", async ()=>{
+      const wfhDays = [...document.querySelectorAll(".wfh-day:checked")].map(i=>Number(i.value));
+      const weekendStatus = document.getElementById("weekend-select").value;
+
+      const userInput = { wfhDays, weekendStatus };
+      const exerciseList = await fetchExerciseList();
+      const plan = generateWeeklyPlan(userInput, exerciseList);
+
+      renderWeeklyPlan(plan);
+      await saveWeeklyPlan(plan);
+      alert("本週計畫已產生並寫入 Google Sheet！");
+    });
+
+    document.getElementById("regenerate-btn").addEventListener("click", async ()=>{
+      document.getElementById("generate-btn").click();
+    });
+
+    document.getElementById("save-log-btn").addEventListener("click", async ()=>{
+      const log = {
+        date: document.getElementById("log-date").value,
+        actual: document.getElementById("log-actual").value,
+        duration: Number(document.getElementById("log-duration").value || 0),
+        note: document.getElementById("log-note").value,
+        compare_result: "N/A"
+      };
+
+      const res = await saveExerciseLog(log);
+      document.getElementById("log-message").innerText = "已成功回存到 Google Sheet！";
+    });
+  </script>
+</body>
+</html>
