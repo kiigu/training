@@ -364,35 +364,37 @@
         const card = document.createElement("div");
         card.className = "card plan-day";
         
-        // 從 logMap 查找當天的實際紀錄
         const actualLog = logMap.get(p.date);
 
         let color = "#0b556a"; 
         let actualDisplay = "待紀錄";
         let logNote = "";
         
-        if (actualLog && actualLog.actual) { // 檢查 actualLog 及其內容
+        if (actualLog && actualLog.actual) { 
             const durationText = actualLog.duration > 0 ? `${actualLog.duration} 分鐘` : '0 分鐘';
             actualDisplay = `${actualLog.actual} (${durationText})`;
             logNote = actualLog.note ? `備註：${actualLog.note}` : '';
             color = actualLog.duration > 0 ? "#27ae60" : "#95a5a6"; 
         } else {
-            if(p.suggestion.includes("伸展") || p.suggestion.includes("休息")) color = "#2ecc71";
-            if(p.suggestion.includes("+")) color = "#e74c3c";
+            if(p.suggestion && (p.suggestion.includes("伸展") || p.suggestion.includes("休息"))) color = "#2ecc71";
+            if(p.suggestion && p.suggestion.includes("+")) color = "#e74c3c";
         }
+        
+        // ★ 關鍵修正：使用 (p.logic_note || '無註解') 進行容錯 ★
+        const logicNoteDisplay = p.logic_note || '無註解'; 
 
         card.style.borderLeftColor = color;
         card.innerHTML = `
           <div class="day-header">
-            <h3 class="day-title">週${p.weekday}</h3>
-            <span class="day-date">${p.date}</span>
+            <h3 class="day-title">週${p.weekday || ''}</h3>
+            <span class="day-date">${p.date || ''}</span>
           </div>
-          <p class="plan-suggestion">建議：${p.suggestion}</p>
+          <p class="plan-suggestion">建議：${p.suggestion || '資料不完整'}</p>
           <p class="plan-actual" style="color:${color};">
-             實際：<span style="font-weight: bold;">${actualDisplay}</span>
-             <span style="font-size: 0.8em; font-weight: normal; color: #7f8c8d;">${logNote}</span>
+            實際：<span style="font-weight: bold;">${actualDisplay}</span>
+            <span style="font-size: 0.8em; font-weight: normal; color: #7f8c8d;">${logNote}</span>
           </p>
-          <p class="plan-logic">💡 ${p.logic_note}</p>
+          <p class="plan-logic">💡 ${logicNoteDisplay}</p>
         `;
         container.appendChild(card);
       });
