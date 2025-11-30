@@ -351,14 +351,24 @@
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    function getDateOfWeek(index){
+    function getDateOfWeek(index) {
       const today = new Date();
-      const day = today.getDay() || 7; 
-      if(day !== 1) today.setHours(-24 * (day - 1)); 
-      const d = new Date(today);
-      d.setDate(today.getDate() + index);
-      return d.toISOString().split("T")[0];
+      const day = today.getDay(); // 0(日)~6(六)
+
+      // 將星期日視為一週最後一天 → 把它調整為 7
+      const normalizedDay = (day === 0 ? 7 : day);
+
+      // 找到本週的星期一
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - (normalizedDay - 1));
+
+      // 取得星期 index（0=週一, 6=週日）
+      const target = new Date(monday);
+      target.setDate(monday.getDate() + index);
+
+      return target.toISOString().split("T")[0];
     }
+
 
     /* =====================
        3. 畫面渲染與事件 (維持不變)
