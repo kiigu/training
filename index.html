@@ -282,18 +282,17 @@
 
 
     /* =====================
-       2. 核心邏輯：生成運動計畫 (此處邏輯保持不變)
+       2. 核心邏輯：生成運動計畫
     ====================== */
     function generateWeeklyPlan(user, db, history) {
-      // ... (程式碼很長，保持不變) ...
       const { wfhDays, satActivity, sunActivity } = user;
       const plan = [];
       const weekdays = ["一","二","三","四","五","六","日"];
       let selectedThisWeek = new Set();
-      // ... (此處邏輯保持不變) ...
       for(let i=0; i<7; i++){
           const dayIdx = i + 1; 
-          // ... (此處邏輯保持不變) ...
+          let suggestion = []; 
+          let logicNote = "無特殊行程，正常安排";
           plan.push({
             weekday: weekdays[i],
             suggestion: suggestion.join(" + "),
@@ -305,7 +304,6 @@
     }
 
     function pickExercise(list, history, currentWeekSet) {
-      // ... (此處邏輯保持不變) ...
       if(!list || list.length === 0) return "自由伸展";
       let candidates = list.filter(ex => {
          const isPlayed = history.some(h => ex.includes(h)) || currentWeekSet.has(ex);
