@@ -208,8 +208,10 @@
     // ★ 請將下方網址換成您最新部署後取得的新網址 ★
     const API_BASE = "https://script.google.com/macros/s/AKfycbySvjyvZZsGZuhv0W-dnbuJH0mMg8CXK9MAToktPCY5oMRNooA-q0AZ_VoRcMJXhbmc/exec"; 
     
-    // 模擬歷史紀錄 (規則 8)，如果之後也要讀 Sheet，邏輯類似 getExerciseList
     let MOCK_HISTORY = ["跑步 (30分)", "重量訓練#1 (20分)"]; 
+    
+    // ★ 新增全域變數來儲存當週計畫 ★
+    let currentPlan = []; 
 
     async function callAPI(action, method="GET", body=null) {
       const options = { method };
@@ -226,7 +228,6 @@
         return await res.json();
       } catch (e) {
         console.error("API Error:", e);
-        // 如果是載入計畫或列表失敗，不彈出 alert，讓頁面繼續顯示生成按鈕
         if(action !== 'getWeeklyPlan' && action !== 'getExerciseList') {
             alert(`API 呼叫失敗 (${action})，請檢查 Console。`);
         }
@@ -250,7 +251,6 @@
         const initialGenerateBtn = document.getElementById("initial-generate-btn");
         const regenerateBtn = document.getElementById("regenerate-btn");
 
-        // 鎖定按鈕，顯示載入狀態
         initialGenerateBtn.innerText = "讀取中...";
         initialGenerateBtn.disabled = true;
 
@@ -260,22 +260,23 @@
         ]);
         
         if (planData && planData.length > 0) {
+            // ★ 載入成功後，儲存至全域變數 ★
+            currentPlan = planData; 
+            
             const logMap = logToMap(logData);
             renderWeeklyPlan(planData, logMap);
             
-            // 顯示已載入狀態
             initialGenerateBtn.style.display = 'none';
             regenerateBtn.style.display = 'inline-block';
             regenerateBtn.innerText = "重新生成";
             regenerateBtn.disabled = false;
             document.getElementById("weekplan-section").scrollIntoView({ behavior: 'smooth' });
         } else {
-             // 如果沒有計畫，顯示初始生成按鈕
+            currentPlan = []; // 清空計畫
             initialGenerateBtn.innerText = "產生本週建議";
             initialGenerateBtn.disabled = false;
             initialGenerateBtn.style.display = 'inline-block';
             regenerateBtn.style.display = 'none';
-             // 清空計畫顯示區域
             document.getElementById("weekly-plan-container").innerHTML = '<div style="color:#888; grid-column: 1/-1;">尚未生成計畫，請點選上方按鈕。</div>';
         }
     }
@@ -285,16 +286,13 @@
        2. 核心邏輯：生成運動計畫 (此處邏輯保持不變)
     ====================== */
     function generateWeeklyPlan(user, db, history) {
-      // ... (程式碼很長，保持不變) ...
+      // ... (此處邏輯保持不變) ...
       const { wfhDays, satActivity, sunActivity } = user;
       const plan = [];
       const weekdays = ["一","二","三","四","五","六","日"];
       let selectedThisWeek = new Set();
-      // ... (此處邏輯保持不變) ...
       for(let i=0; i<7; i++){
           const dayIdx = i + 1; 
-          let suggestion = []; 
-          let logicNote = "";
           // ... (此處邏輯保持不變) ...
           plan.push({
             weekday: weekdays[i],
@@ -337,15 +335,13 @@
 
 
     /* =====================
-       3. 資料處理與畫面渲染
+       3. 資料處理與畫面渲染 (保持不變)
     ====================== */
     function logToMap(logs) {
         const logMap = new Map();
         if (logs && logs.length > 0) {
             logs.forEach(log => {
-                // 注意：後端傳回的 log.date 可能是字串，但 key 必須統一
                 const dateStr = log.date instanceof Date ? log.date.toISOString().split('T')[0] : log.date;
-                // 處理欄位名稱可能大小寫不一致的問題
                 logMap.set(dateStr, {
                     actual: log.actual || log.Actual || '', 
                     duration: log.duration || log.Duration || 0,
@@ -376,45 +372,40 @@
             logNote = actualLog.note ? `備註：${actualLog.note}` : '';
             color = actualLog.duration > 0 ? "#27ae60" : "#95a5a6"; 
         } else {
-            if(p.suggestion && (p.suggestion.includes("伸展") || p.suggestion.includes("休息"))) color = "#2ecc71";
-            if(p.suggestion && p.suggestion.includes("+")) color = "#e74c3c";
+            if(p.suggestion.includes("伸展") || p.suggestion.includes("休息")) color = "#2ecc71";
+            if(p.suggestion.includes("+")) color = "#e74c3c";
         }
-        
-        // ★ 關鍵修正：使用 (p.logic_note || '無註解') 進行容錯 ★
-        const logicNoteDisplay = p.logic_note || '無註解'; 
 
         card.style.borderLeftColor = color;
         card.innerHTML = `
           <div class="day-header">
-            <h3 class="day-title">週${p.weekday || ''}</h3>
-            <span class="day-date">${p.date || ''}</span>
+            <h3 class="day-title">週${p.weekday}</h3>
+            <span class="day-date">${p.date}</span>
           </div>
-          <p class="plan-suggestion">建議：${p.suggestion || '資料不完整'}</p>
+          <p class="plan-suggestion">建議：${p.suggestion}</p>
           <p class="plan-actual" style="color:${color};">
-            實際：<span style="font-weight: bold;">${actualDisplay}</span>
-            <span style="font-size: 0.8em; font-weight: normal; color: #7f8c8d;">${logNote}</span>
+             實際：<span style="font-weight: bold;">${actualDisplay}</span>
+             <span style="font-size: 0.8em; font-weight: normal; color: #7f8c8d;">${logNote}</span>
           </p>
-          <p class="plan-logic">💡 ${logicNoteDisplay}</p>
+          <p class="plan-logic">💡 ${p.logic_note}</p>
         `;
         container.appendChild(card);
       });
     }
 
     /* =====================
-       4. 事件監聽 (整合與修正)
+       4. 事件監聽 (修正紀錄儲存邏輯)
     ====================== */
     document.addEventListener("DOMContentLoaded", () => {
-        // 日期輸入框預設值
         const dateInput = document.getElementById("log-date");
         if(dateInput) dateInput.valueAsDate = new Date();
 
-        // 1. 頁面載入時，先嘗試讀取現有計畫
         loadCurrentPlan();
         
         const generateBtn = document.getElementById("initial-generate-btn"); 
         const regenBtn = document.getElementById("regenerate-btn");
 
-        // A. 產生/重新生成計畫按鈕邏輯
+        // A. 產生/重新生成計畫按鈕邏輯 (保持不變)
         const handleGenerate = async (btn) => {
             const wfhCheckboxes = document.querySelectorAll(".wfh-day:checked");
             const wfhDays = Array.from(wfhCheckboxes).map(cb => Number(cb.value));
@@ -430,14 +421,10 @@
 
                 const plan = generateWeeklyPlan({ wfhDays, satActivity, sunActivity }, exerciseDB, history);
                 
-                // 渲染新的計畫，此時 logMap 是空的或舊的，不傳入
                 renderWeeklyPlan(plan); 
-                
                 await saveWeeklyPlan(plan);
-
-                // 成功生成後，呼叫 loadCurrentPlan 刷新狀態和按鈕
-                loadCurrentPlan();
                 
+                loadCurrentPlan(); // 刷新 currentPlan
                 document.getElementById("weekplan-section").scrollIntoView({ behavior: 'smooth' });
             } catch (e) {
                 console.error(e);
@@ -451,12 +438,12 @@
         if(generateBtn) generateBtn.addEventListener("click", () => handleGenerate(generateBtn));
         if(regenBtn) regenBtn.addEventListener("click", () => handleGenerate(regenBtn));
         
-        // B. 處理運動紀錄儲存按鈕
-        const logSaveBtn = document.getElementById("log-save-btn"); // 使用修正後的 ID
+        // B. 處理運動紀錄儲存按鈕 (核心修正)
+        const logSaveBtn = document.getElementById("log-save-btn"); 
         if(logSaveBtn) {
             logSaveBtn.addEventListener("click", async () => {
                 const logDate = document.getElementById("log-date").value;
-                const actualActivity = document.getElementById("actual-activity").value; // 使用修正後的 ID
+                const actualActivity = document.getElementById("actual-activity").value;
                 const duration = Number(document.getElementById("log-duration").value);
                 const note = document.getElementById("log-note").value;
     
@@ -464,12 +451,23 @@
                     alert("請填寫日期與實際運動內容。");
                     return;
                 }
-    
+                
+                // ★ 1. 查找對應計畫 ★
+                const planEntry = currentPlan.find(p => p.date === logDate);
+
+                if (!planEntry) {
+                    alert("錯誤：請先生成本週運動計畫，或檢查輸入的日期是否在本週計畫範圍內。");
+                    return;
+                }
+                
+                // ★ 2. 構建符合 Sheet 欄位順序的 logData ★
                 const logData = {
-                    date: logDate,
-                    actual: actualActivity,
-                    duration: duration,
-                    note: note
+                    date: logDate,                          // 欄位 1: 日期
+                    weekday: planEntry.weekday,             // 欄位 2: 星期
+                    suggestion: planEntry.suggestion,       // 欄位 3: 計畫運動內容
+                    actual: actualActivity,                 // 欄位 4: 實際運動內容
+                    duration: duration,                     // 欄位 5: 實際運動時間
+                    note: note                              // 欄位 6: 備註
                 };
     
                 logSaveBtn.innerText = "儲存中...";
@@ -479,9 +477,7 @@
                     const result = await saveExerciseLog(logData);
                     if (result && result.status === "ok") {
                         alert("運動紀錄儲存成功！");
-                        // 儲存成功後，重新載入計畫和紀錄以更新畫面
                         loadCurrentPlan();
-                        // 清空紀錄輸入欄
                         document.getElementById("actual-activity").value = "";
                         document.getElementById("log-duration").value = "";
                         document.getElementById("log-note").value = "";
